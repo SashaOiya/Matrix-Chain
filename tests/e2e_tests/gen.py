@@ -36,9 +36,9 @@ def get_optimal_order(s, i, j):
 # Создаем папку для тестов
 os.makedirs("data", exist_ok=True)
 
-num_tests = 5
+num_tests = 7
 for test_id in range(1, num_tests + 1):
-    n = random.randint(3, 10)  # Количество матриц
+    n = random.randint(3, 20)  # Количество матриц
     dims = generate_test_case(n + 1)
     min_operations, s = matrix_chain_order(dims)
     order = get_optimal_order(s, 0, n - 1)
