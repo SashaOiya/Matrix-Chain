@@ -23,14 +23,13 @@ auto init_matrix_chain_class() {
         }
     }
 
-    MatrixChain<std::size_t> mc;
+    MatrixChain<std::size_t> chain;
     for (int i = 0; i < size - 1; ++i) {
-        mc.add_matrix(dimensions[i], dimensions[i + 1]);
+        chain.push_back(Matrix<std::size_t>(dimensions[i], dimensions[i + 1]));
     }
+    chain.optimal_order_multiplications();
 
-    mc.optimal_order_multiplications();
-
-    return mc;
+    return chain;
 }
 
 static void BM_Optimal(benchmark::State& state) {

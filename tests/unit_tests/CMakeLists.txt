@@ -1,4 +1,4 @@
-add_executable(matrix_chain_unit_test test.cpp)
+add_executable(matrix_chain_unit_test test.cpp chain_tests.cpp)
 
 target_link_libraries(matrix_chain_unit_test
 PRIVATE
