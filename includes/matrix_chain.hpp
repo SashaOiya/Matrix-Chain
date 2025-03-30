@@ -51,6 +51,12 @@ class MatrixChain final {
     //----------------------------------------------
     size_type size() const noexcept { return chain_.size(); }
     bool operator==(const_reference rhs) { return chain_ == rhs.chain_; }
+    reference operator[](size_type n) {
+        if (n >= size()) {
+            throw std::invalid_argument("Invalid index");
+        }
+        return chain_[n];
+    }
     
     bool empty() { return chain_.empty(); }
 

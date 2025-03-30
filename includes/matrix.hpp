@@ -17,8 +17,6 @@ class Matrix final: private std::vector<T>{
         data_type& operator[](std::size_t j) const { return row[j]; }
     };
 
-    std::size_t index_ = 0;
-
    public:
     using value_type = T;
     using size_type = std::size_t;
