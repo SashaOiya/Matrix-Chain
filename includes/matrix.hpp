@@ -3,10 +3,11 @@
 #include <cstddef>
 #include <iterator>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 template <typename T>
-class Matrix final: private std::vector<T>{
+class Matrix final : private std::vector<T> {
    private:
     std::size_t rows_;
     std::size_t cols_;
@@ -32,7 +33,7 @@ class Matrix final: private std::vector<T>{
     using std::vector<value_type>::data;
 
     Matrix(size_type n_rows, size_type n_cols)
-        : std::vector<T>(n_rows * n_cols), rows_(n_rows), cols_(n_cols){}
+        : std::vector<T>(n_rows * n_cols), rows_(n_rows), cols_(n_cols) {}
 
     Matrix(size_type n_rows, size_type n_cols, std::initializer_list<value_type> l)
         : std::vector<T>(l), rows_(n_rows), cols_(n_cols) {
@@ -40,6 +41,23 @@ class Matrix final: private std::vector<T>{
             throw std::invalid_argument("Incorrect initializer list size");
         }
     }
+
+    Matrix(const Matrix&) = default;
+    Matrix& operator=(const Matrix&) = default;
+
+    Matrix(Matrix&& rhs) noexcept
+        : std::vector<value_type>(std::move(rhs)),
+          rows_(std::exchange(rhs.rows_, 0)),
+          cols_(std::exchange(rhs.cols_, 0)) {}
+
+    Matrix& operator=(Matrix&& rhs) noexcept {
+        std::vector<T>::operator=(std::move(rhs));
+        rows_ = std::exchange(rhs.rows_, 0);
+        cols_ = std::exchange(rhs.cols_, 0);
+        return *this;
+    }
+
+    ~Matrix() = default;
 
     Proxy_Row<value_type> operator[](size_type i) {
         if (rows_ <= i) throw std::invalid_argument("Rows out of bounds");
