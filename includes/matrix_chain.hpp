@@ -11,7 +11,7 @@
 #include "matrix.hpp"
 
 template <typename T>
-class MatrixChain {
+class MatrixChain final {
     std::deque<Matrix<T>> chain_;
     std::deque<std::size_t> dimensions_;
     std::vector<std::vector<std::size_t>> min_operation;

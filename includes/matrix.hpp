@@ -6,9 +6,8 @@
 #include <vector>
 
 template <typename T>
-class Matrix {
+class Matrix final: private std::vector<T>{
    private:
-    std::vector<T> buffer_;
     std::size_t rows_;
     std::size_t cols_;
 
@@ -32,11 +31,13 @@ class Matrix {
     using const_reverse_iterator = typename std::vector<value_type>::const_reverse_iterator;
     using iterator_category = typename std::iterator_traits<iterator>::iterator_category;
 
+    using std::vector<value_type>::data;
+
     Matrix(size_type n_rows, size_type n_cols)
-        : rows_(n_rows), cols_(n_cols), buffer_(n_rows * n_cols) {}
+        : std::vector<T>(n_rows * n_cols), rows_(n_rows), cols_(n_cols){}
 
     Matrix(size_type n_rows, size_type n_cols, std::initializer_list<value_type> l)
-        : rows_(n_rows), cols_(n_cols), buffer_(l) {
+        : std::vector<T>(l), rows_(n_rows), cols_(n_cols) {
         if (l.size() != size()) {
             throw std::invalid_argument("Incorrect initializer list size");
         }
@@ -44,73 +45,29 @@ class Matrix {
 
     Proxy_Row<value_type> operator[](size_type i) {
         if (rows_ <= i) throw std::invalid_argument("Rows out of bounds");
-        return Proxy_Row<T>{buffer_.data() + cols_ * i};
+        return Proxy_Row<T>{data() + cols_ * i};
     }
 
     Proxy_Row<const value_type> operator[](size_type i) const {
         if (rows_ <= i) throw std::invalid_argument("Rows out of bounds");
-        return Proxy_Row<const T>{buffer_.data() + cols_ * i};
-    }
-    //-------------------------------
-    bool operator==(const Matrix<value_type> rhs) { return buffer_ == rhs.buffer_; }
-    bool operator==(iterator rhs) { return buffer_[index_] == *rhs; }
-
-    iterator operator+(size_type n) {
-        index_ += n;
-        return begin() + index_;
+        return Proxy_Row<const T>{data() + cols_ * i};
     }
 
-    iterator operator-(size_type n) {
-        index_ -= n;
-        return begin() + index_;
-    }
-
-    iterator operator--() {
-        --index_;
-        return begin() + index_;
-    }
-
-    iterator operator--(int) {
-        iterator temp = begin() + index_;
-        --index_;
-        return temp;
-    }
-
-    iterator operator++(int) {
-        iterator temp = begin() + index_;
-        ++index_;
-        return temp;
-    }
-
-    iterator operator++() {
-        ++index_;
-        return begin() + index_;
-    }
-
-    reference operator*() { return buffer_[index_]; }
-
-    const_reference operator*() const { return buffer_[index_]; }
     //-------------------------------
     size_type n_cols() const noexcept { return cols_; }
     size_type n_rows() const noexcept { return rows_; }
-    size_type size() const noexcept { return buffer_.size(); }
+    using std::vector<value_type>::size;
 
-    iterator begin() noexcept { return buffer_.begin(); }
-    iterator end() noexcept { return buffer_.end(); }
+    using std::vector<value_type>::begin;
+    using std::vector<value_type>::end;
+    using std::vector<value_type>::cbegin;
+    using std::vector<value_type>::cend;
+    using std::vector<value_type>::rbegin;
+    using std::vector<value_type>::rend;
+    using std::vector<value_type>::crbegin;
+    using std::vector<value_type>::crend;
 
-    const_iterator begin() const noexcept { return buffer_.begin(); }
-    const_iterator end() const noexcept { return buffer_.end(); }
-
-    const_iterator cbegin() const noexcept { return buffer_.cbegin(); }
-    const_iterator cend() const noexcept { return buffer_.cend(); }
-
-    reverse_iterator rbegin() noexcept { return buffer_.rbegin(); }
-    reverse_iterator rend() noexcept { return buffer_.rend(); }
-
-    const_reverse_iterator crbegin() const noexcept { return buffer_.crbegin(); }
-    const_reverse_iterator crend() const noexcept { return buffer_.crend(); }
-
-    bool equal(const Matrix& other) const { return buffer_ == other.buffer_; }
+    bool equal(const Matrix& other) const { return data() == other.data(); }
 };
 
 template <typename T>
