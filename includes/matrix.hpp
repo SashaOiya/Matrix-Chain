@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstddef>
-#include <iterator>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -12,11 +11,7 @@ class Matrix final : private std::vector<T> {
     std::size_t rows_;
     std::size_t cols_;
 
-    template <typename data_type>
-    struct Proxy_Row {
-        data_type* row;
-        data_type& operator[](std::size_t j) const { return row[j]; }
-    };
+    using base = std::vector<T>;
 
    public:
     using value_type = T;
@@ -24,34 +19,34 @@ class Matrix final : private std::vector<T> {
     using difference_type = std::ptrdiff_t;
     using reference = value_type&;
     using const_reference = const value_type&;
-    using iterator = typename std::vector<value_type>::iterator;
-    using const_iterator = typename std::vector<value_type>::const_iterator;
-    using reverse_iterator = typename std::vector<value_type>::reverse_iterator;
-    using const_reverse_iterator = typename std::vector<value_type>::const_reverse_iterator;
-    using iterator_category = typename std::iterator_traits<iterator>::iterator_category;
+    using typename base::const_iterator;
+    using typename base::const_reverse_iterator;
+    using typename base::iterator;
+    using typename base::reverse_iterator;
 
-    using std::vector<value_type>::data;
+    using base::data;
 
     Matrix(size_type n_rows, size_type n_cols)
         : std::vector<T>(n_rows * n_cols), rows_(n_rows), cols_(n_cols) {}
 
     Matrix(size_type n_rows, size_type n_cols, std::initializer_list<value_type> l)
-        : std::vector<T>(l), rows_(n_rows), cols_(n_cols) {
-        if (l.size() != size()) {
+        : rows_(n_rows), cols_(n_cols) {
+        if (l.size() != rows_ * cols_) {
             throw std::invalid_argument("Incorrect initializer list size");
         }
+        this->assign(l);
     }
 
     Matrix(const Matrix&) = default;
     Matrix& operator=(const Matrix&) = default;
 
     Matrix(Matrix&& rhs) noexcept
-        : std::vector<value_type>(std::move(rhs)),
+        : base(std::move(rhs)),
           rows_(std::exchange(rhs.rows_, 0)),
           cols_(std::exchange(rhs.cols_, 0)) {}
 
     Matrix& operator=(Matrix&& rhs) noexcept {
-        std::vector<T>::operator=(std::move(rhs));
+        base::operator=(std::move(rhs));
         rows_ = std::exchange(rhs.rows_, 0);
         cols_ = std::exchange(rhs.cols_, 0);
         return *this;
@@ -59,50 +54,56 @@ class Matrix final : private std::vector<T> {
 
     ~Matrix() = default;
 
-    Proxy_Row<value_type> operator[](size_type i) {
-        if (rows_ <= i) throw std::invalid_argument("Rows out of bounds");
-        return Proxy_Row<T>{data() + cols_ * i};
+    // 1. this is at(), not operator[]
+    // 2. throw std::out_of_range
+    // 3. it's better to start exception message with a small letter
+    constexpr value_type& operator[](size_type row, size_type col) {
+        if (!(row < rows_ && col < cols_)) {
+            throw std::invalid_argument("Invalid matrix access");
+        }
+        return data()[row * cols_ + col];
     }
 
-    Proxy_Row<const value_type> operator[](size_type i) const {
-        if (rows_ <= i) throw std::invalid_argument("Rows out of bounds");
-        return Proxy_Row<const T>{data() + cols_ * i};
+    constexpr const value_type& operator[](size_type row, size_type col) const {
+        if (!(row < rows_ && col < cols_)) {
+            throw std::invalid_argument("Invalid matrix access");
+        }
+        return data()[row * cols_ + row];
     }
 
     //-------------------------------
     size_type n_cols() const noexcept { return cols_; }
     size_type n_rows() const noexcept { return rows_; }
-    using std::vector<value_type>::size;
+    using base::size;
 
-    using std::vector<value_type>::begin;
-    using std::vector<value_type>::end;
-    using std::vector<value_type>::cbegin;
-    using std::vector<value_type>::cend;
-    using std::vector<value_type>::rbegin;
-    using std::vector<value_type>::rend;
-    using std::vector<value_type>::crbegin;
-    using std::vector<value_type>::crend;
+    using base::begin;
+    using base::cbegin;
+    using base::cend;
+    using base::crbegin;
+    using base::crend;
+    using base::end;
+    using base::rbegin;
+    using base::rend;
 
-    bool equal(const Matrix& other) const { return data() == other.data(); }
+    bool operator==(const Matrix& rhs) const = default;
 };
 
 template <typename T>
-Matrix<T> multiply(Matrix<T>& A, Matrix<T>& rhs) {
-    const std::size_t rhs_cols = rhs.n_cols();
-    const std::size_t rhs_rows = rhs.n_rows();
-    const std::size_t cols = A.n_cols();
-    const std::size_t rows = A.n_rows();
-
-    if (cols != rhs_rows) {
+Matrix<T> multiply(Matrix<T>& lhs, Matrix<T>& rhs) {
+    const auto lhs_cols = lhs.n_cols();
+    if (lhs_cols != rhs.n_rows()) {
         throw std::invalid_argument("Invalid matrix size");
     }
 
-    Matrix<T> mul_matrix(rows, rhs_cols);
+    const auto rhs_cols = rhs.n_cols();
+    const auto lhs_rows = lhs.n_rows();
+    
+    Matrix<T> mul_matrix(lhs_rows, rhs_cols);
 
-    for (std::size_t i = 0; i < rows; ++i) {
+    for (std::size_t i = 0; i < lhs_rows; ++i) {
         for (std::size_t j = 0; j < rhs_cols; ++j) {
-            for (std::size_t k = 0; k < cols; ++k) {
-                mul_matrix[i][j] += A[i][k] * rhs[k][j];
+            for (std::size_t k = 0; k < lhs_cols; ++k) {
+                mul_matrix[i, j] += lhs[i, k] * rhs[k, j];
             }
         }
     }

@@ -22,8 +22,8 @@ class MatrixChain final {
    public:
     using value_type = Matrix<T>;
     using size_type = std::size_t;
-    using reference = value_type&;
-    using const_reference = const value_type&;
+    using reference = value_type &;
+    using const_reference = const value_type &;
     using iterator = std::deque<value_type>::iterator;
     using const_iterator = std::deque<value_type>::const_iterator;
     using reverse_iterator = std::deque<value_type>::reverse_iterator;
@@ -35,12 +35,11 @@ class MatrixChain final {
     MatrixChain(Iter begin, Iter end) {
         chain_.insert(chain_.begin(), begin, end);
 
-        size_type size = this->size();
-        if (size) {
+        if (size_type size = this->size()) {
             dimensions_.push_back(chain_[0].n_cols());
             dimensions_.push_back(chain_[0].n_rows());
 
-            for (int i = 1; i < size - 1; ++i) {
+            for (size_type i = 1; i < size - 1; ++i) {
                 dimensions_.push_back(chain_[i].n_rows());
             }
         }
@@ -51,14 +50,19 @@ class MatrixChain final {
     //----------------------------------------------
     size_type size() const noexcept { return chain_.size(); }
     bool operator==(const_reference rhs) { return chain_ == rhs.chain_; }
+
+    // 1. at()
+    // 2. std::out_of_range
     reference operator[](size_type n) {
         if (n >= size()) {
             throw std::invalid_argument("Invalid index");
         }
         return chain_[n];
     }
-    
-    bool empty() { return chain_.empty(); }
+
+    bool empty() const noexcept { return chain_.empty(); }
+
+    // remove bounding checks or implement separate methods
 
     reference front() {
         check_chain_size_init();
@@ -114,21 +118,19 @@ class MatrixChain final {
 
     iterator begin() noexcept { return chain_.begin(); }
     const_iterator begin() const noexcept { return chain_.begin(); }
+    iterator cbegin() const noexcept { return begin(); }
 
     iterator end() noexcept { return chain_.end(); }
     const_iterator end() const noexcept { return chain_.end(); }
-
-    iterator cbegin() const noexcept { return chain_.cbegin(); }
-    const_iterator cned() const noexcept { return chain_.cend(); }
+    const_iterator cend() const noexcept { return end(); }
 
     reverse_iterator rbegin() noexcept { return chain_.rbegin(); }
     const_reverse_iterator rbegin() const noexcept { return chain_.rbegin(); }
+    const_reverse_iterator crbegin() const noexcept { return rbegin(); }
 
     reverse_iterator rend() noexcept { return chain_.rend(); }
     const_reverse_iterator rend() const noexcept { return chain_.rend(); }
-
-    const_reverse_iterator crbegin() const noexcept { return chain_.crbegin(); }
-    const_reverse_iterator crend() const noexcept { return chain_.crend(); }
+    const_reverse_iterator crend() const noexcept { return rend(); }
     //----------------------------------------------
 
     void optimal_order_multiplications() {
@@ -137,15 +139,14 @@ class MatrixChain final {
         min_operation.assign(matrix_n, std::vector<size_type>(matrix_n, 0));
         optimal_splits.assign(matrix_n, std::vector<size_type>(matrix_n, -1));
 
-        const size_type max_value = std::numeric_limits<size_type>::max();
         for (size_type subsequence_length = 2; subsequence_length <= matrix_n;
              ++subsequence_length) {
             for (size_type i = 0; i < matrix_n - subsequence_length + 1; ++i) {
-                int j = i + subsequence_length - 1;
-                min_operation[i][j] = max_value;
+                size_type j = i + subsequence_length - 1;
+                min_operation[i][j] = std::numeric_limits<size_type>::max();
 
-                for (int k = i; k < j; ++k) {
-                    int q = min_operation[i][k] + min_operation[k + 1][j] +
+                for (auto k = i; k < j; ++k) {
+                    auto q = min_operation[i][k] + min_operation[k + 1][j] +
                             dimensions_[i] * dimensions_[k + 1] * dimensions_[j + 1];
                     if (q < min_operation[i][j]) {
                         min_operation[i][j] = q;
@@ -156,8 +157,8 @@ class MatrixChain final {
         }
     }
 
-    int naive_order_multiplications() {
-        int multiplications = 0;
+    size_type naive_order_multiplications() const {
+        size_type multiplications = 0;
         for (size_t i = 0; i < dimensions_.size() - 2; ++i) {
             multiplications += dimensions_[i] * dimensions_[i + 1] * dimensions_[i + 2];
         }
@@ -173,18 +174,19 @@ class MatrixChain final {
         check_optimal_order_init();
 
         while (!stk.empty()) {
-            auto [left, right] = stk.top();
+            const auto [left, right] = stk.top();
             stk.pop();
 
             if (left >= right) continue;
 
-            int k = optimal_splits[left][right];
+            const auto k = optimal_splits[left][right];
             output.push_back(k);  // reverse order
 
             stk.push({left, k});
             stk.push({k + 1, right});
         }
 
+        // std::ranges::reverse(output); return output;
         return std::vector<size_type>(output.rbegin(), output.rend());
     }
 
@@ -198,18 +200,20 @@ class MatrixChain final {
 
         std::vector<size_type> order = get_optimal_order(0, dimensions_.size() - 2);
 
-        std::cout << *(order.begin());
-        for (auto it = order.begin() + 1, end = order.end(); it != end; ++it) {
-            std::cout << " " << *it;
+        // fmt::println("{}", fmt::join(order));
+        auto it = order.begin();
+        std::cout << *it++;
+        for (auto end = order.end(); it != end; ++it) {
+            std::cout << ' ' << *it;
         }
-        std::cout << std::endl;
+        std::cout << '\n';
     }
 
     void compare_methods() {
         int optimalMultiplications = get_optimal_multiplications();
         int naiveMultiplications = naive_order_multiplications();
         double improvement = (double)naiveMultiplications / optimalMultiplications;
-        std::cout << "\nImprovement factor: " << improvement << std::endl;
+        std::cout << "\nImprovement factor: " << improvement << '\n';
     }
 
    private:
@@ -236,16 +240,19 @@ class MatrixChain final {
     //----------------------------------------------
     template <InPos position>
     void insert_dimension(size_type col, size_type row) {
+        // maybe assert
         if (!dimensions_.empty() && dimensions_.back() != row) {
             throw std::invalid_argument("Incompatible matrix dimensions.");
         }
         if (dimensions_.empty()) {
             dimensions_.push_back(row);
             dimensions_.push_back(col);
-        } else if (position == InPos::Back) {
-            dimensions_.push_back(col);
         } else {
-            dimensions_.push_front(row);
+            if constexpr (position == InPos::Back) {
+                dimensions_.push_back(col);
+            } else {
+                dimensions_.push_front(row);
+            }
         }
     }
 };
